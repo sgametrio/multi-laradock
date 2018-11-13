@@ -1,0 +1,29 @@
+{
+   "name": "multi-laradock",
+   "version": "0.0.1",
+   "description": "",
+   "keywords": [
+      "laradock",
+      "cli",
+      "multilaradock"
+   ],
+   "author": "@sgametrio",
+   "license": "MIT",
+   "repository": {
+      "type": "git",
+      "url": "https://github.com/sgametrio/multi-laradock.git"
+   },
+   "scripts": {},
+   "dependencies": {
+      "colors": "^1.3.2",
+      "commander": "^2.19.0",
+      "dotenv": "^6.1.0",
+      "shelljs": "^0.8.2",
+      "sudo-prompt": "^8.2.3"
+   },
+   "devDependencies": {},
+   "preferGlobal": true,
+   "bin": {
+      "multi-laradock": "./index.js"
+   }
+}
