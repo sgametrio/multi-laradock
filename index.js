@@ -2,6 +2,7 @@
 
 const program = require("commander")
 const shell = require("shelljs")
+const { execFileSync } = require('child_process');
 const sudo = require("sudo-prompt")
 const fs = require("fs")
 const dotenv = require("dotenv")
@@ -44,16 +45,14 @@ program
       // Trim trailing slash if present
       name = name.replace(/\/$/, "")
 
+      assertWorkingDirectory(laradock_home)
+
       try {
          const config = dotenv.config({ path: `${laradock_home}/.env`})
          mysql_root_password = config.parsed.MYSQL_ROOT_PASSWORD
       } catch (error) {}
 
       log(`Creating new Laradock project ${name} configuration...`, colors.info)
-
-      if (!fs.existsSync(laradock_home)) {
-         error(`Can't find ${laradock_home} directory. Have you tried -l option?`)
-      }
 
       if (!fs.existsSync(`${nginx_vhost_file}`)) {
          error(`Can't find laravel.conf.example. Do you want to download it?`)
@@ -78,12 +77,32 @@ program
          }
       )
    })
-   
+ 
+// Not ready yet  
+/*
+program
+   .command("bash <name>")
+   .action((name) => {
+      // Trim trailing slash if present
+      name = name.replace(/\/$/, "")
+      assertWorkingDirectory(laradock_home)
+      assertWorkingDirectory(name)
+      shell.cd(laradock_home)
+      // TODO: Sanitize input: name!!
+      // -w need docker-compose.yml version field > 3 (3.7 works) (COMPOSE_API_VERSION doesn't work)
+      execFileSync("docker-compose", ["exec", "-T", "-w", `/var/www/${name}`, "--user=laradock", "workspace", "bash"], { stdio: "inherit" })
+      // execFileSync("docker-compose", ["exec", "-T", "--user=laradock", "workspace", "bash", "--init-file", `<(echo 'cd ${name}')`], { stdio: "inherit" })
+      // execFileSync(`docker-compose exec -T --user=laradock workspace bash --init-file <(echo 'cd ${name}')`, { stdio: "inherit" })
+   })
+*/
+
 program
    .command("rm <name>")
    .action((name) => {
       // Trim trailing slash if present
       name = name.replace(/\/$/, "")
+
+      assertWorkingDirectory(laradock_home)
 
       try {
          const config = dotenv.config({ path: `${laradock_home}/.env`})
@@ -123,6 +142,10 @@ program
    .action((name) => {
       // Trim trailing slash if present
       name = name.replace(/\/$/, "")
+
+      assertWorkingDirectory(laradock_home)
+      assertWorkingDirectory(name)
+
       log(`Initializing ${name} laravel project inside ${name} directory...`, colors.info)
       log(`Updating .env and .env.testing...`, colors.info)
 
@@ -131,7 +154,8 @@ program
          DB_HOST: "mysql",
          DB_USERNAME: name,
          DB_PASSWORD: name,
-         DB_DATABASE: name
+         DB_DATABASE: name,
+         APP_URL: `http://${name}.test`
       }
 
       const testing = {
@@ -139,15 +163,16 @@ program
          DB_USERNAME: `${name}_test`,
          DB_PASSWORD: `${name}_test`,
          DB_DATABASE: `${name}_test`,
-         APP_ENV: "testing"
+         APP_ENV: "testing",
+         APP_URL: `http://${name}.test`
       }
-      update_env_file({
+      override_env({
          from: `${name}/.env.example`,
          to: `${name}/.env`,
          changes: changes
       })
 
-      update_env_file({
+      override_env({
          from: `${name}/.env.example`,
          to: `${name}/.env.testing`,
          changes: testing
@@ -157,14 +182,12 @@ program
       shell.cd(laradock_home)
       shell.exec("docker-compose up -d nginx mysql")
       shell.exec(`docker-compose exec -T --user=laradock workspace bash -c 'cd ${name} && ${artisan_commands}'`)
-      
-      // TODO: nova commands if nova folder is detected
    })
 
 program.parse(process.argv)
 
 // Copy env file and override some keys
-function update_env_file({ from, to, changes }) {
+function override_env({ from, to, changes }) {
    shell.cp(from, to)
    for ([key, value] of Object.entries(changes)) {
       shell.sed("-i", new RegExp(key + "=.*"), `${key}=${value}`, to)
@@ -177,6 +200,12 @@ function error(error) {
 }
 
 // Helper to color output
-function log(log, fn) {
-   console.log(fn(log))
+function log(log, color) {
+   console.log(color(log))
+}
+
+function assertWorkingDirectory(laradock_home) {
+   if (!fs.existsSync(laradock_home)) {
+      error(`Can't find ${laradock_home} directory. Have you tried -l option?`)
+   }
 }
