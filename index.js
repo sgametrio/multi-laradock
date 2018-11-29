@@ -2,7 +2,8 @@
 
 const program = require("commander")
 const shell = require("shelljs")
-const { execFileSync } = require('child_process');
+// const mysql = require("mysql")
+// const { execFileSync } = require('child_process');
 const sudo = require("sudo-prompt")
 const fs = require("fs")
 const dotenv = require("dotenv")
@@ -45,12 +46,15 @@ program
       // Trim trailing slash if present
       name = name.replace(/\/$/, "")
 
-      assertWorkingDirectory(laradock_home)
+      assertWorkingDirectoryContains(laradock_home)
 
       try {
          const config = dotenv.config({ path: `${laradock_home}/.env`})
          mysql_root_password = config.parsed.MYSQL_ROOT_PASSWORD
       } catch (error) {}
+
+      const mysql_command = `CREATE DATABASE ${name}; GRANT ALL PRIVILEGES ON ${name}.* TO '${name}'@'%' IDENTIFIED BY '${name}';`
+      const mysql_test_command = `CREATE DATABASE ${name}_test; GRANT ALL PRIVILEGES ON ${name}_test.* TO '${name}_test'@'%' IDENTIFIED BY '${name}_test';`
 
       log(`Creating new Laradock project ${name} configuration...`, colors.info)
 
@@ -61,10 +65,11 @@ program
       shell.cp(nginx_vhost_file, `${laradock_home}/nginx/sites/${name}.conf`)
       shell.sed("-i", "laravel", name, `${laradock_home}/nginx/sites/${name}.conf`)
 
-      const mysql_command = `CREATE DATABASE ${name}; GRANT ALL PRIVILEGES ON ${name}.* TO '${name}'@'%' IDENTIFIED BY '${name}';`
-      const mysql_test_command = `CREATE DATABASE ${name}_test; GRANT ALL PRIVILEGES ON ${name}_test.* TO '${name}_test'@'%' IDENTIFIED BY '${name}_test';`
+      // Stopping and upping to reload nginx config
       shell.cd(laradock_home)
-      shell.exec("docker-compose up -d nginx mysql")
+      shell.exec("docker-compose restart nginx mysql") // needed if already running
+
+      // TODO: add check on database existence
       log(`Creating ${name} database and user...`, colors.info)
       shell.exec(`docker-compose exec -T mysql mysql -u root -p${mysql_root_password} --execute="${mysql_command}"`)
       log(`Creating ${name}_test database and user...`, colors.info)
@@ -85,8 +90,8 @@ program
    .action((name) => {
       // Trim trailing slash if present
       name = name.replace(/\/$/, "")
-      assertWorkingDirectory(laradock_home)
-      assertWorkingDirectory(name)
+      assertWorkingDirectoryContains(laradock_home)
+      assertWorkingDirectoryContains(name)
       shell.cd(laradock_home)
       // TODO: Sanitize input: name!!
       // -w need docker-compose.yml version field > 3 (3.7 works) (COMPOSE_API_VERSION doesn't work)
@@ -102,7 +107,7 @@ program
       // Trim trailing slash if present
       name = name.replace(/\/$/, "")
 
-      assertWorkingDirectory(laradock_home)
+      assertWorkingDirectoryContains(laradock_home)
 
       try {
          const config = dotenv.config({ path: `${laradock_home}/.env`})
@@ -131,11 +136,12 @@ program
       )
    })
 
-program
-   .command("discover")
-   .action(() => {
-      log("Updating existing configuration to reflect directory structure...", colors.info)
-   })
+// TODO: discover existing projects
+// program
+//    .command("discover")
+//    .action(() => {
+//       log("TODO: Updating existing configuration to reflect directory structure...", colors.info)
+//    })
 
 program
    .command("init <name>")
@@ -143,8 +149,8 @@ program
       // Trim trailing slash if present
       name = name.replace(/\/$/, "")
 
-      assertWorkingDirectory(laradock_home)
-      assertWorkingDirectory(name)
+      assertWorkingDirectoryContains(laradock_home)
+      assertWorkingDirectoryContains(name)
 
       log(`Initializing ${name} laravel project inside ${name} directory...`, colors.info)
       log(`Updating .env and .env.testing...`, colors.info)
@@ -204,8 +210,17 @@ function log(log, color) {
    console.log(color(log))
 }
 
-function assertWorkingDirectory(laradock_home) {
-   if (!fs.existsSync(laradock_home)) {
-      error(`Can't find ${laradock_home} directory. Have you tried -l option?`)
+function assertWorkingDirectoryContains(dir) {
+   if (!fs.existsSync(dir)) {
+      error(`Can't find ${dir} directory. Have you tried -l option to set laradock root folder?`)
    }
 }
+
+// function mysqlCreateDatabase({database, user="root", password="root"}) {
+//    const connection = mysql.createConnection({
+//       host: "mysql",
+//       user: user,
+//       password: password
+//    })
+//    // TODO: create db and user with mysql package
+// }
