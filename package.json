@@ -1,7 +1,7 @@
 {
    "name": "multi-laradock",
-   "version": "0.0.2",
-   "description": "",
+   "version": "0.0.3",
+   "description": "Help with multiple sites Laradock configuration",
    "keywords": [
       "laradock",
       "cli",
