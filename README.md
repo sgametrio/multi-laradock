@@ -8,7 +8,7 @@ __It is NOT__ a general-purpose Laradock CLI. I don't have time and experience t
 
 ### When do you use it?
 
-When you have a Laravel project and you want to serve it using existent Laradock environment without breaking things.
+When you have a Laravel project and you want to serve it using existent Laradock multiple sites environment without breaking things.
 
 #### Use case
 
@@ -16,17 +16,14 @@ We have a project setup like this:
 
 ```shell
 + laradock/		# Laradock multiproject installation directory
-+ project-1/	# A project served by Laradock
-+ project-2/	# Another project served by Laradock
-...
 + project-x/	# An existent project NOT configured by being served by Laradock
 ```
 
-Laradock is (already!) configured to serve multiple projects on different URLs like `http://project-1.test` and `http://project-2.test`.
+Laradock has to be already configured to serve multiple sites. 
 
 We want to serve __project-x__ over `http://project-x.test`.
 
-__Before__: had to modify NGINX configuration, modify `/etc/hosts`, create databases for testing and development, create database users.
+__Before multi-laradock__: You had to modify NGINX configuration, modify `/etc/hosts`, create databases for testing and development, create database users.
 
 __Now__: run `multi-laradock new project-x` and open `http://project-x.test`!
 
@@ -64,3 +61,7 @@ Now, you're ready to go!
 ### Why?
 
 I develop Laravel applications using NGINX and MySQL mostly. I needed a fast and reliable way to add a new project into my existing development setup.
+
+## TODO
+* Do not use plain shell command for mysql and docker-compose. Migrate to their respective libs for Node.
+* Check if containers are running after upping them or if they exited.
